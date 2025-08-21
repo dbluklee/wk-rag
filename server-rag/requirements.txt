@@ -1,0 +1,31 @@
+# CHEESEADE RAG Server - 실제 사용 패키지만 (최신 버전)
+
+# === 웹 프레임워크 ===
+fastapi                             # FastAPI 웹 프레임워크
+uvicorn[standard]                   # ASGI 서버 (uvloop, httptools 포함)
+pydantic                           # 데이터 검증
+
+# === HTTP 클라이언트 ===
+requests                           # HTTP 요청
+httpx                              # 비동기 HTTP 클라이언트 (로깅용)
+
+# === LangChain 생태계 ===
+langchain                          # LangChain 코어
+langchain-core                     # LangChain 핵심 추상화
+langchain-text-splitters          # 텍스트 분할 도구
+langchain-huggingface             # HuggingFace 통합
+langchain-milvus                  # Milvus 벡터 스토어
+langchain-ollama                  # Ollama LLM 통합
+
+# === 벡터 데이터베이스 ===
+pymilvus                          # Milvus Python SDK
+
+# === 임베딩 및 ML (PyTorch 제외) ===
+transformers                      # Transformer 모델
+sentence-transformers            # 문장 임베딩
+huggingface_hub
+transformers
+
+# === 기본 유틸리티 ===
+numpy                            # 수치 계산 (의존성)
+

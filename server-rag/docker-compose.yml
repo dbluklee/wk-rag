@@ -1,0 +1,55 @@
+services:
+  rag-server:
+    build: 
+      context: .
+      args:
+        USE_CUDA: ${USE_CUDA:-true}  # ../.env에서 설정 가능
+        CUDA_VERSION: ${CUDA_VERSION:-cu121}
+    container_name: wk-rag-server
+    env_file:
+      - ../.env.global
+      - .env
+    ports:
+      - "8100:8000"
+    environment:
+      - PYTHONUNBUFFERED=1   
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBIAN_FRONTEND=noninteractive
+      - CUDA_VISIBLE_DEVICES=${USE_CUDA:+${CUDA_VISIBLE_DEVICES:-0}}
+      - LLM_SERVER_URL=http://${LLM_SERVER_IP}:${LLM_PORT}
+      - MILVUS_SERVER_URL=http://${MILVUS_SERVER_IP}:${MILVUS_PORT}
+      - LOGGING_SERVER_URL=http://${LOGGING_SERVER_IP}:${LOGGING_PORT}
+    volumes:
+      - ./docs:/app/docs:ro
+      - ./chunking/chunks:/app/chunking/chunks
+    restart: unless-stopped
+    depends_on:
+      - rag-init
+    # GPU 사용시에만 GPU 리소스 할당
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${USE_CUDA:+all}  # USE_CUDA=true일 때만
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # 의존성 확인 서비스
+  rag-init:
+    image: curlimages/curl:latest
+    container_name: wk-rag-init
+    volumes:
+      - ./startup.sh:/startup.sh
+    entrypoint: ["/bin/sh", "/startup.sh"]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - LLM_SERVER_URL=http://${LLM_SERVER_IP}:${LLM_PORT}
+      - API_TIMEOUT=120
+    restart: "no"

@@ -1,0 +1,24 @@
+# 로그 파일
+*.log
+logs*
+
+# 백업 파일
+*.backup
+*.bak
+*.tar.gz
+*.zip
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# IDE 파일
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 임시 파일
+tmp/
+temp/
+

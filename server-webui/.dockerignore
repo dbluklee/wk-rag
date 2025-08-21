@@ -1,0 +1,8 @@
+config/
+data/
+.gitignore
+docker-compose*.yml
+.dockerignore
+*.env
+.DS_Store
+Thumbs.db

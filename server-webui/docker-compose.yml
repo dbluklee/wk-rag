@@ -1,0 +1,31 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    env_file:
+      - ../.env.global
+      - .env
+    container_name: wk-webui
+    ports:
+      - '3100:8080'
+    environment:
+      - 'OLLAMA_BASE_URL=http://${RAG_SERVER_IP}:${RAG_PORT};http://${LLM_SERVER_IP}:${LLM_PORT}'
+
+      # 모델별 서버 매핑
+      - 'RAG_SERVER_URL=http://${RAG_SERVER_IP}:${RAG_PORT}'
+      - 'LLM_SERVER_URL=http://${LLM_SERVER_IP}:${LLM_PORT}'
+      
+      # 기본 설정
+      - 'DEFAULT_MODELS=${RAG_MODEL_NAME},${LLM_MODEL_NAME}'
+      - 'MODEL_FILTER_LIST=${RAG_MODEL_NAME};${LLM_MODEL_NAME}'
+  
+    volumes:
+      - ./data:/app/backend/data
+      - ./config:/app/backend/config
+    
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

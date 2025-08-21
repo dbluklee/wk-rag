@@ -1,0 +1,8 @@
+volumes/
+.gitignore
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+*.env
+.DS_Store
+Thumbs.db
