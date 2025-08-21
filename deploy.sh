@@ -35,8 +35,8 @@ echo "   Milvus: $MILVUS_SERVER_URL"
 echo "📁 필요한 디렉토리 생성..."
 
 # 각 서버별 데이터 디렉토리 생성 (로그 등)
-mkdir -p server-webui/config
-mkdir -p server-webui/data
+# mkdir -p server-webui/config
+# mkdir -p server-webui/data
 
 # docs/ 폴더 내용 확인
 DOC_COUNT=$(find server-rag/docs -type f 2>/dev/null | wc -l)
@@ -149,7 +149,7 @@ check_rag_health() {
         printf "   시도 %d/%d: " "$attempt" "$max_attempts"
         
         # 1. 컨테이너 상태 먼저 확인
-        rag_status=$(docker ps --filter "name=cheeseade-rag-server" --format "{{.Status}}" 2>/dev/null)
+        rag_status=$(docker ps --filter "name=wk-rag-server" --format "{{.Status}}" 2>/dev/null)
         if [[ ! "$rag_status" =~ ^Up ]]; then
             echo -e "${RED}컨테이너가 실행 중이 아님${NC}"
             sleep 5
@@ -180,16 +180,6 @@ check_rag_health() {
                 fi
             fi
             
-            # 로깅 연결 테스트
-            if [ "$ENABLE_LOGGING" = "true" ]; then
-                echo -e "   📝 로깅 서버 연결 테스트 중..."
-                if curl -s --connect-timeout 3 "${LOGGING_SERVER_URL}/health" >/dev/null 2>&1; then
-                    echo -e "   ✅ 로깅 서버 연결됨"
-                else
-                    echo -e "   ⚠️ 로깅 서버 연결 실패 (RAG는 정상 작동)"
-                fi
-            fi
-            
             return 0
         fi
         
@@ -206,7 +196,7 @@ check_rag_health() {
             echo -e "     /api/tags: ${models_code}" 
             
             # 로그 확인
-            rag_logs=$(docker logs --tail 10 cheeseade-rag-server 2>/dev/null || echo "로그 확인 불가")
+            rag_logs=$(docker logs --tail 10 wk-rag-server 2>/dev/null || echo "로그 확인 불가")
             echo -e "   📋 최근 로그:"
             echo "$rag_logs" | tail -3 | sed 's/^/     /'
         else
@@ -268,7 +258,6 @@ cleanup_on_failure() {
             docker compose -f server-webui/docker-compose.yml down --remove-orphans 2>/dev/null || true
             docker compose -f server-rag/docker-compose.yml down --remove-orphans 2>/dev/null || true
             docker compose -f server-milvus/docker-compose.yml down --remove-orphans 2>/dev/null || true
-            docker compose -f server-logging/docker-compose.yml down --remove-orphans 2>/dev/null || true
         }
         
         echo -e "${GREEN}   ✅ 시스템 정리 완료${NC}"
@@ -355,7 +344,6 @@ echo -e "${YELLOW}🧹 기존 컨테이너 및 이미지 정리 중...${NC}"
 docker compose -f server-webui/docker-compose.yml down --remove-orphans 2>/dev/null || true
 docker compose -f server-rag/docker-compose.yml down --remove-orphans 2>/dev/null || true
 docker compose -f server-milvus/docker-compose.yml down --remove-orphans 2>/dev/null || true
-docker compose -f server-logging/docker-compose.yml down --remove-orphans 2>/dev/null || true
 
 echo -e "${GREEN}✅ 정리 완료${NC}"
 
@@ -369,23 +357,16 @@ trap 'cleanup_on_failure' ERR  # 에러 발생 시 정리 함수 호출
 # 의존성 순서에 따른 서비스 시작
 echo ""
 echo -e "${CYAN}🎯 의존성 순서에 따른 서비스 시작${NC}"
-echo -e "   순서: Milvus → Logging → RAG → WebUI"
+echo -e "   순서: Milvus → RAG → WebUI"
 
 # 1. Milvus Server (가장 기본이 되는 데이터베이스)
 start_service "server-milvus" "Milvus Server" "벡터 데이터베이스" "check_milvus_health"
-
-# 3. Logging Server (RAG 로깅용 - 선택적)
-if [ "$ENABLE_LOGGING" = "true" ]; then
-    start_service "server-logging" "Logging Server" "RAG 질문/답변 로깅" "check_logging_health"
-else
-    echo -e "${YELLOW}⚠️ 로깅 서버 비활성화됨 (ENABLE_LOGGING=false)${NC}"
-fi
 
 # 4. RAG Server (Milvus, LLM, 로깅에 의존)
 start_service "server-rag" "RAG Server" "API 및 검색 서버" "check_rag_health"
 
 # 5. WebUI Server (모든 백엔드 서비스에 의존) - 초기화됨
-start_service "server-webui" "WebUI Server" "사용자 인터페이스 (초기화됨)" "check_webui_health"
+start_service "server-webui" "WebUI Server" "사용자 인터페이스" "check_webui_health"
 
 # 에러 핸들러 해제 (정상 완료)
 set +e
@@ -397,16 +378,13 @@ echo -e "${CYAN}🔍 전체 시스템 최종 검증...${NC}"
 
 # 모든 컨테이너 상태 확인
 echo -e "📋 실행 중인 컨테이너:"
-running_containers=$(docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "cheeseade|llm-server")
+running_containers=$(docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "wk")
 if [ -n "$running_containers" ]; then
     echo "$running_containers"
     
     # 컨테이너 개수 확인
     container_count=$(echo "$running_containers" | wc -l)
-    expected_count=7  # 로깅 서버 포함
-    if [ "$ENABLE_LOGGING" != "true" ]; then
-        expected_count=5  # 로깅 서버 제외
-    fi
+    expected_count=5  # 로깅 서버 포함
     
     echo -e "\n📊 총 실행 중인 컨테이너: ${container_count}개 (예상: ${expected_count}개)"
     
@@ -426,25 +404,11 @@ echo "========================================"
 echo -e "⏱️ 배포 완료 시간: $(date)"
 echo ""
 echo -e "${CYAN}📊 다음 단계:${NC}"
-echo "   1. 📋 상태 확인: ./health-check.sh"
-echo "   2. 🌐 브라우저 접속: http://${WEBUI_SERVER_IP}:${WEBUI_PORT}"
+echo "   1. 🌐 브라우저 접속: http://${WEBUI_SERVER_IP}:${WEBUI_PORT}"
 echo "      ⚠️ 중요: 시크릿/인코그니토 모드로 접속 (캐시 방지)"
-echo "   3. 🔧 서버 연결 설정:"
-echo "      • Settings → Connections"
-echo "      • LLM Server: http://${WEBUI_SERVER_IP}:${LLM_PORT}"
-echo "      • RAG Server: http://${WEBUI_SERVER_IP}:${RAG_PORT}"
-echo "   4. 🤖 사용 가능한 모델:"
+echo "   2. 🤖 사용 가능한 모델:"
 echo "      • ${RAG_MODEL_NAME} (CHEESEADE RAG를 활용한 전문 상담)"
-echo "      • ${LLM_MODEL_NAME} (일반 대화)"
 
-if [ "$ENABLE_LOGGING" = "true" ]; then
-    echo ""
-    echo -e "${PURPLE}📊 로깅 시스템 정보:${NC}"
-    echo "   • 로깅 API: http://${WEBUI_SERVER_IP}:${LOGGING_PORT}"
-    echo "   • API 문서: http://${WEBUI_SERVER_IP}:${LOGGING_PORT}/docs"
-    echo "   • 모든 RAG 질문/답변이 자동으로 기록됩니다"
-    echo "   • 통계 조회: curl http://${WEBUI_SERVER_IP}:${LOGGING_PORT}/api/stats"
-fi
 
 echo ""
 echo -e "${PURPLE}🧹 WebUI 초기화 완료:${NC}"
@@ -457,11 +421,6 @@ echo -e "${BLUE}🔧 문제 발생 시:${NC}"
 echo "   • 로그 수집: ./monitoring/logs-collect.sh"
 echo "   • 시스템 재시작: ./stop.sh && ./deploy.sh"
 echo "   • 브라우저 캐시 삭제 또는 시크릿 모드 사용"
-
-if [ "$ENABLE_LOGGING" = "true" ]; then
-    echo "   • 로깅 서버 로그: docker compose -f server-logging/docker-compose.yml logs"
-    echo "   • 데이터베이스 백업: docker exec cheeseade-logging-db pg_dump -U raguser rag_logging > backup.sql"
-fi
 
 echo ""
 echo -e "${GREEN}✨ 배포가 성공적으로 완료되었습니다!${NC}"

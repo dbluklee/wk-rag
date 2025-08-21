@@ -25,7 +25,7 @@ services:
       - ./chunking/chunks:/app/chunking/chunks
     restart: unless-stopped
     depends_on:
-      - rag-init
+      - wk-rag-init
     # GPU 사용시에만 GPU 리소스 할당
     deploy:
       resources:

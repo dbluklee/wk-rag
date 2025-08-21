@@ -24,9 +24,6 @@ services:
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-    ports:
-      - "9001:9001"
-      - "9000:9000"
     volumes:
       - ./volumes/minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
@@ -49,8 +46,8 @@ services:
     volumes:
       - ./volumes/milvus:/var/lib/milvus
     ports:
-      - "19530:19530"
-      - "9091:9091"
+      - "19630:19530"
+      - "9191:9091"
     depends_on:
       etcd:
         condition: service_healthy
